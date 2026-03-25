@@ -5,128 +5,313 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Uni Task List</title>
+
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0d0d14">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  min-height: 100vh;
+  background: #0d0d14;
+  font-family: Georgia, serif;
+  display: flex;
+  justify-content: center;
+  padding: 40px 16px 80px;
+  color: #d8d4cc;
+}
+
+#app { width: 100%; max-width: 540px; }
+
+.label {
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: #3a3a50;
+  margin-bottom: 6px;
+}
+
+h1 {
+  font-size: 34px;
+  font-weight: 400;
+  color: #f0ede6;
+  line-height: 1.1;
+  margin-bottom: 28px;
+}
+
+h1 em { font-style: italic; color: #c8b88a; }
+
+.toggle {
+  display: inline-flex;
+  background: #13131c;
+  border-radius: 12px;
+  border: 1px solid #1e1e2c;
+  padding: 4px;
+  gap: 2px;
+  margin-bottom: 28px;
+}
+
+.toggle button {
+  padding: 9px 20px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: #3a3a52;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.toggle button.active {
+  background: #c8b88a;
+  color: #0d0d14;
+  font-weight: 700;
+}
+
+.progress-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #444;
+  margin-bottom: 7px;
+}
+
+.progress-bar-bg {
+  height: 3px;
+  background: #1a1a24;
+  border-radius: 4px;
+  margin-bottom: 24px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: #c8b88a;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.filters {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.filter-btn {
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid #1e1e2c;
+  background: transparent;
+  color: #333;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.task-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 20px; }
+
+.task-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px 14px;
+  background: #13131c;
+  border-radius: 10px;
+  border: 1px solid #1c1c28;
+  border-left-width: 3px;
+}
+
+.task-card.done { opacity: 0.4; }
+
+.check-btn {
+  margin-top: 2px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 2px solid #f5a623;
+  background: transparent;
+  cursor: pointer;
+}
+
+.task-content { flex: 1; min-width: 0; }
+
+.task-text {
+  font-size: 14px;
+  color: #ccc8c0;
+  margin-bottom: 6px;
+}
+
+.task-card.done .task-text {
+  text-decoration: line-through;
+  color: #2e2e3e;
+}
+
+.delete-btn {
+  background: none;
+  border: none;
+  color: #222230;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.add-trigger {
+  width: 100%;
+  padding: 13px;
+  border-radius: 10px;
+  border: 1px dashed #1e1e2c;
+  background: transparent;
+  color: #2e2e42;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.add-trigger:hover { border-color: #c8b88a; color: #c8b88a; }
+
+</style>
 </head>
+
 <body>
 <div id="app"></div>
 
 <script>
 
-// 🔗 Google Sheets API endpoint
-const API_URL = "https://script.google.com/macros/s/AKfycbzFDydpWA0Odc1DIBpbdEW29Q_8LpLzLOMpbDGUwOz2zgdd700qKrmtKsOP6CBCtxMu/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzeN9ekGejjLad4ncxeXHGrXKJG2EKB2yeuccgb97n9Rd66V_BWAT34Vwbo9k4_uOKb/exec";
 
 const SUBJECTS = [
   "Linear Algebra",
   "Fundamentals of Electronics",
   "Programming II",
   "Fundamentals of Computers II",
-  "Mathematics Discrete and Logical II",
+  "Mathematics Discrete and Logical II"
 ];
 
-// ── State ─────────────────────────────
+const SUBJECT_COLORS = {
+  "Linear Algebra": "#7b8cde",
+  "Fundamentals of Electronics": "#e07b5a",
+  "Programming II": "#4caf88",
+  "Fundamentals of Computers II": "#c47fd4",
+  "Mathematics Discrete and Logical II": "#5ab4e0"
+};
+
 let state = {
   page: "assignment",
   filterSubject: "All",
   showAdd: false,
-  nextId: 1,
   tasks: [],
-  form: { text: "", due: "", priority: "medium", subject: SUBJECTS[0] },
+  form: { text: "", due: "", priority: "medium", subject: SUBJECTS[0] }
 };
 
-// ── Load from Google Sheets ───────────
 async function loadTasks() {
   try {
     const res = await fetch(API_URL);
-    const data = await res.json();
-    return data || [];
-  } catch (err) {
-    console.error("Load failed", err);
+    return await res.json();
+  } catch {
     return [];
   }
 }
 
-// ── Save to Google Sheets ─────────────
 async function saveTasks() {
   try {
+    const remote = await loadTasks();
+    const merged = [...remote];
+
+    state.tasks.forEach(localTask => {
+      const index = merged.findIndex(t => t.id === localTask.id);
+      if (index === -1) merged.push(localTask);
+      else merged[index] = localTask;
+    });
+
+    state.tasks = merged;
+
     await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(state.tasks),
+      body: JSON.stringify(merged)
     });
+
   } catch (err) {
-    console.error("Save failed", err);
+    console.error(err);
   }
 }
 
-// ── Helpers ───────────────────────────
 function el(tag, attrs, ...children) {
   const e = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
     if (k.startsWith("on")) e.addEventListener(k.slice(2).toLowerCase(), v);
     else e.setAttribute(k, v);
   }
-  for (const child of children) {
-    if (child == null) continue;
-    e.appendChild(typeof child === "string" ? document.createTextNode(child) : child);
-  }
+  children.forEach(c => e.append(c));
   return e;
 }
 
-// ── Render ────────────────────────────
 function render() {
+
   const app = document.getElementById("app");
   app.innerHTML = "";
 
-  state.tasks.forEach(task => {
-    const item = el("div", {},
-      task.text + " (" + task.subject + ")"
-    );
-    app.appendChild(item);
+  app.append(el("div",{class:"label"},"Academic Planner"));
+  app.append(el("h1",{},"Your tasks,",el("br"),el("em",{},"sorted.")));
+
+  const list = el("div",{class:"task-list"});
+
+  state.tasks.forEach(task=>{
+
+    const card = el("div",{class:"task-card"+(task.done?" done":"")});
+    card.style.borderLeftColor = SUBJECT_COLORS[task.subject];
+
+    const check = el("button",{class:"check-btn",onclick:()=>{
+      task.done=!task.done;
+      saveTasks();
+      render();
+    }});
+
+    const text = el("div",{class:"task-text"},task.text);
+
+    const del = el("button",{class:"delete-btn",onclick:()=>{
+      state.tasks=state.tasks.filter(t=>t.id!==task.id);
+      saveTasks();
+      render();
+    }},"×");
+
+    card.append(check,el("div",{class:"task-content"},text),del);
+
+    list.append(card);
   });
 
-  const btn = el("button", {
-    onClick: addTask
-  }, "+ Add test task");
+  app.append(list);
 
-  app.appendChild(btn);
+  app.append(el("button",{class:"add-trigger",onclick:addTask},"+ Add task"));
 }
 
-// ── Add task demo ─────────────────────
-function addTask() {
-  const newTask = {
-    id: Date.now(),
-    text: "New task",
-    due: "",
-    done: false,
-    priority: "medium",
-    subject: SUBJECTS[0],
-    type: state.page,
-  };
+function addTask(){
 
-  state.tasks.push(newTask);
+  state.tasks.push({
+    id: crypto.randomUUID(),
+    text:"New task",
+    due:"",
+    done:false,
+    priority:"medium",
+    subject:SUBJECTS[0],
+    type:state.page
+  });
+
   saveTasks();
   render();
 }
 
-// ── Init ──────────────────────────────
-render();
-
-async function refreshFromServer() {
-  const remoteTasks = await loadTasks();
-
-  // Only re-render if something actually changed
-  if (JSON.stringify(remoteTasks) !== JSON.stringify(state.tasks)) {
-    state.tasks = remoteTasks;
+async function refreshFromServer(){
+  const remote=await loadTasks();
+  if(JSON.stringify(remote)!==JSON.stringify(state.tasks)){
+    state.tasks=remote;
     render();
   }
 }
 
-// initial load
+render();
 refreshFromServer();
-
-// auto-sync every 5 seconds
-setInterval(refreshFromServer, 5000);
+setInterval(refreshFromServer,5000);
 
 </script>
 </body>

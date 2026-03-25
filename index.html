@@ -14,7 +14,7 @@
 <script>
 
 // 🔗 Google Sheets API endpoint
-const API_URL = "https://script.google.com/macros/s/AKfycby-qWLxPApLOO8QKTWpON18hk5-y9Iji8nm2xBI_LuanL9aA7bQs4MLBPSnKEINU-JS/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzFDydpWA0Odc1DIBpbdEW29Q_8LpLzLOMpbDGUwOz2zgdd700qKrmtKsOP6CBCtxMu/exec";
 
 const SUBJECTS = [
   "Linear Algebra",
@@ -112,10 +112,21 @@ function addTask() {
 // ── Init ──────────────────────────────
 render();
 
-loadTasks().then(tasks => {
-  state.tasks = tasks;
-  render();
-});
+async function refreshFromServer() {
+  const remoteTasks = await loadTasks();
+
+  // Only re-render if something actually changed
+  if (JSON.stringify(remoteTasks) !== JSON.stringify(state.tasks)) {
+    state.tasks = remoteTasks;
+    render();
+  }
+}
+
+// initial load
+refreshFromServer();
+
+// auto-sync every 5 seconds
+setInterval(refreshFromServer, 5000);
 
 </script>
 </body>

@@ -318,6 +318,7 @@
 <div id="app"></div>
 
 <script>
+const API_URL = "https://script.google.com/macros/s/AKfycbzeN9ekGejjLad4ncxeXHGrXKJG2EKB2yeuccgb97n9Rd66V_BWAT34Vwbo9k4_uOKb/exec";
 const SUBJECTS = [
   "Linear Algebra",
   "Fundamentals of Electronics",
@@ -343,27 +344,45 @@ let state = {
   filterSubject: "All",
   showAdd: false,
   nextId: 100,
-  tasks: loadTasks(),
+  tasks: [],
+  async function init() {
+  state.tasks = await loadTasks();
+  render();
+}
+
+init();
   form: { text: "", due: "", priority: "medium", subject: SUBJECTS[0] },
 };
 
-function loadTasks() {
-  try {
-    const saved = localStorage.getItem("uni-tasks");
-    if (saved) return JSON.parse(saved);
-  } catch(e) {}
-  return [
-    { id: 1, text: "Problem set 3", due: "2026-03-28", done: false, priority: "high", subject: "Linear Algebra", type: "assignment" },
-    { id: 2, text: "Debugging exercise", due: "2026-03-29", done: false, priority: "medium", subject: "Programming II", type: "assignment" },
-    { id: 3, text: "Circuit analysis worksheet", due: "2026-04-02", done: false, priority: "medium", subject: "Fundamentals of Electronics", type: "assignment" },
-    { id: 4, text: "Chapter 4–6 revision", due: "2026-04-05", done: false, priority: "high", subject: "Linear Algebra", type: "exam" },
-    { id: 5, text: "Past paper practice", due: "2026-04-07", done: false, priority: "medium", subject: "Mathematics Discrete and Logical II", type: "exam" },
-    { id: 6, text: "Flash cards — memory units", due: "2026-04-10", done: false, priority: "low", subject: "Fundamentals of Computers II", type: "exam" },
-  ];
+async function loadTasks() {
+  const res = await fetch(API_URL);
+  const data = await res.json();
+
+  return data.slice(1).map(row => ({
+    id: Number(row[0]),
+    text: row[1],
+    due: row[2],
+    done: row[3] === "true" || row[3] === true,
+    priority: row[4],
+    subject: row[5],
+    type: row[6],
+    status: row[7],
+  }));
 }
 
-function saveTasks() {
-  try { localStorage.setItem("uni-tasks", JSON.stringify(state.tasks)); } catch(e) {}
+async function saveTasks(task) {
+  await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify([
+      task.id,
+      task.text,
+      task.due,
+      task.done,
+      task.priority,
+      task.subject,
+      task.type
+    ])
+  });
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -391,7 +410,10 @@ function el(tag, attrs, ...children) {
 // ── Render ─────────────────────────────────────────────────────────────────
 function render() {
   const { page, filterSubject, showAdd, tasks, form } = state;
-  const pageTasks = tasks.filter(t => t.type === page);
+  const pageTasks = tasks.filter(t => {
+  if (page === "deleted") return t.status === "deleted";
+  return t.type === page && t.status !== "deleted";
+});
   const filtered = pageTasks
     .filter(t => filterSubject === "All" || t.subject === filterSubject)
     .sort((a, b) => {
@@ -412,9 +434,10 @@ function render() {
   // Toggle
   const toggle = el("div", { className: "toggle" });
   for (const { key, label } of [
-    { key: "assignment", label: "✏️ Assignments" },
-    { key: "exam", label: "📚 Exams & Study" },
-  ]) {
+  { key: "assignment", label: "✏️ Assignments" },
+  { key: "exam", label: "📚 Exams & Study" },
+  { key: "deleted", label: "🗑 Deleted" },
+]) {
     const btn = el("button", {
       className: page === key ? "active" : "",
       onClick: () => { state.page = key; state.filterSubject = "All"; state.showAdd = false; render(); },
@@ -589,21 +612,48 @@ function render() {
   }
 }
 
-function addTask() {
+async function addTask() {
   const { text, due, priority, subject } = state.form;
+
   if (!text.trim()) return;
-  state.tasks.push({
+
+  const newTask = {
     id: state.nextId++,
     text: text.trim(),
-    due: due || "—",
+    due: due || "",
     done: false,
     priority,
     subject,
     type: state.page,
+  };
+
+  // send task to Google Sheets
+  await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify([
+      newTask.id,
+      newTask.text,
+      newTask.due,
+      newTask.done,
+      newTask.priority,
+      newTask.subject,
+      newTask.type
+    ])
   });
-  state.form = { text: "", due: "", priority: "medium", subject: SUBJECTS[0] };
+
+  // update app locally
+  state.tasks.push(newTask);
+
+  // reset form
+  state.form = {
+    text: "",
+    due: "",
+    priority: "medium",
+    subject: SUBJECTS[0]
+  };
+
   state.showAdd = false;
-  saveTasks();
+
   render();
 }
 

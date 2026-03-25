@@ -325,13 +325,10 @@ async function loadFromSheets() {
 async function saveToSheets() {
   state.sync = "syncing";
   renderSyncStatus();
-  // Also save locally as backup
   try { localStorage.setItem("uni-tasks", JSON.stringify(state.tasks)); } catch(_) {}
   try {
-    await fetch(SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "save", tasks: state.tasks }),
-    });
+    const encoded = encodeURIComponent(JSON.stringify(state.tasks));
+    await fetch(SCRIPT_URL + "?action=save&tasks=" + encoded);
     state.sync = "synced";
   } catch(e) {
     state.sync = "error";

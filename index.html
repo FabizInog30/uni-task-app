@@ -318,6 +318,9 @@
 <div id="app"></div>
 
 <script>
+
+const API_URL = "https://script.google.com/macros/s/AKfycbzeN9ekGejjLad4ncxeXHGrXKJG2EKB2yeuccgb97n9Rd66V_BWAT34Vwbo9k4_uOKb/exec";
+
 const SUBJECTS = [
   "Linear Algebra",
   "Fundamentals of Electronics",
@@ -337,36 +340,43 @@ const SUBJECT_COLORS = {
 const PRIORITY_COLORS = { high: "#ff4d4d", medium: "#f5a623", low: "#4caf88" };
 const PRIORITY_LABELS = { high: "Urgent", medium: "Soon", low: "Later" };
 
-// ── State ──────────────────────────────────────────────────────────────────
 let state = {
   page: "assignment",
   filterSubject: "All",
   showAdd: false,
-  nextId: 100,
-  tasks: loadTasks(),
+  tasks: [],
   form: { text: "", due: "", priority: "medium", subject: SUBJECTS[0] },
 };
 
-function loadTasks() {
+async function loadTasks() {
   try {
-    const saved = localStorage.getItem("uni-tasks");
-    if (saved) return JSON.parse(saved);
-  } catch(e) {}
-  return [
-    { id: 1, text: "Problem set 3", due: "2026-03-28", done: false, priority: "high", subject: "Linear Algebra", type: "assignment" },
-    { id: 2, text: "Debugging exercise", due: "2026-03-29", done: false, priority: "medium", subject: "Programming II", type: "assignment" },
-    { id: 3, text: "Circuit analysis worksheet", due: "2026-04-02", done: false, priority: "medium", subject: "Fundamentals of Electronics", type: "assignment" },
-    { id: 4, text: "Chapter 4–6 revision", due: "2026-04-05", done: false, priority: "high", subject: "Linear Algebra", type: "exam" },
-    { id: 5, text: "Past paper practice", due: "2026-04-07", done: false, priority: "medium", subject: "Mathematics Discrete and Logical II", type: "exam" },
-    { id: 6, text: "Flash cards — memory units", due: "2026-04-10", done: false, priority: "low", subject: "Fundamentals of Computers II", type: "exam" },
-  ];
+    const res = await fetch(API_URL);
+    return await res.json();
+  } catch {
+    return [];
+  }
 }
 
-function saveTasks() {
-  try { localStorage.setItem("uni-tasks", JSON.stringify(state.tasks)); } catch(e) {}
+async function saveTasks() {
+
+  const remote = await loadTasks();
+  const merged = [...remote];
+
+  state.tasks.forEach(localTask => {
+    const index = merged.findIndex(t => t.id === localTask.id);
+    if (index === -1) merged.push(localTask);
+    else merged[index] = localTask;
+  });
+
+  state.tasks = merged;
+
+  await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(merged),
+  });
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
 function formatDue(dateStr) {
   if (!dateStr || dateStr === "—") return null;
   const d = new Date(dateStr + "T00:00:00");
@@ -381,23 +391,27 @@ function el(tag, attrs, ...children) {
     else if (k === "style" && typeof v === "object") Object.assign(e.style, v);
     else e.setAttribute(k, v);
   }
-  for (const child of children) {
-    if (child == null) continue;
-    e.appendChild(typeof child === "string" ? document.createTextNode(child) : child);
-  }
+  children.forEach(child => {
+    if (child != null)
+      e.appendChild(typeof child === "string" ? document.createTextNode(child) : child);
+  });
   return e;
 }
 
-// ── Render ─────────────────────────────────────────────────────────────────
 function render() {
-  const { page, filterSubject, showAdd, tasks, form } = state;
+
+  const { page, filterSubject, showAdd, tasks } = state;
+
   const pageTasks = tasks.filter(t => t.type === page);
+
   const filtered = pageTasks
     .filter(t => filterSubject === "All" || t.subject === filterSubject)
     .sort((a, b) => {
       if (a.done !== b.done) return a.done ? 1 : -1;
-      return { high: 0, medium: 1, low: 2 }[a.priority] - { high: 0, medium: 1, low: 2 }[b.priority];
+      return { high:0, medium:1, low:2 }[a.priority] -
+             { high:0, medium:1, low:2 }[b.priority];
     });
+
   const done = pageTasks.filter(t => t.done).length;
   const pct = pageTasks.length ? Math.round((done / pageTasks.length) * 100) : 0;
   const isAssignment = page === "assignment";
@@ -405,209 +419,112 @@ function render() {
   const app = document.getElementById("app");
   app.innerHTML = "";
 
-  // Header
-  app.appendChild(el("div", { className: "label" }, "Academic Planner"));
-  app.appendChild(el("h1", {}, "Your tasks,", el("br", {}), el("em", {}, "sorted.")));
+  app.appendChild(el("div",{className:"label"},"Academic Planner"));
+  app.appendChild(el("h1",{},"Your tasks,",el("br"),el("em",{},"sorted.")));
 
-  // Toggle
-  const toggle = el("div", { className: "toggle" });
-  for (const { key, label } of [
-    { key: "assignment", label: "✏️ Assignments" },
-    { key: "exam", label: "📚 Exams & Study" },
-  ]) {
-    const btn = el("button", {
-      className: page === key ? "active" : "",
-      onClick: () => { state.page = key; state.filterSubject = "All"; state.showAdd = false; render(); },
-    }, label);
-    toggle.appendChild(btn);
-  }
+  const toggle = el("div",{className:"toggle"});
+
+  [
+    {key:"assignment",label:"✏️ Assignments"},
+    {key:"exam",label:"📚 Exams & Study"}
+  ].forEach(({key,label})=>{
+    toggle.appendChild(
+      el("button",{
+        className:page===key?"active":"",
+        onClick:()=>{state.page=key;state.filterSubject="All";render();}
+      },label)
+    );
+  });
+
   app.appendChild(toggle);
 
-  // Progress
-  const pctSpan = el("span", { className: "pct" + (pct === 100 ? " done" : "") }, pct + "%");
-  if (pct === 100) pctSpan.style.color = "#4caf88";
-  app.appendChild(el("div", { className: "progress-row" },
-    el("span", {}, `${done} of ${pageTasks.length} complete`),
+  const pctSpan = el("span",{className:"pct"},pct+"%");
+  app.appendChild(el("div",{className:"progress-row"},
+    el("span",{},`${done} of ${pageTasks.length} complete`),
     pctSpan
   ));
-  const fillBar = el("div", { className: "progress-bar-fill" });
-  fillBar.style.width = pct + "%";
-  if (pct === 100) fillBar.style.background = "#4caf88";
-  app.appendChild(el("div", { className: "progress-bar-bg" }, fillBar));
 
-  // Subject filters
-  const filters = el("div", { className: "filters" });
-  for (const s of ["All", ...SUBJECTS]) {
-    const active = filterSubject === s;
-    const color = s === "All" ? "#666" : SUBJECT_COLORS[s];
-    const btn = el("button", {
-      className: "filter-btn",
-      onClick: () => { state.filterSubject = s; render(); },
-    }, s === "All" ? "All subjects" : s);
-    if (active) {
-      btn.style.borderColor = color;
-      btn.style.background = color + "20";
-      btn.style.color = color;
-    }
-    filters.appendChild(btn);
-  }
-  app.appendChild(filters);
+  const fillBar = el("div",{className:"progress-bar-fill"});
+  fillBar.style.width=pct+"%";
+  app.appendChild(el("div",{className:"progress-bar-bg"},fillBar));
 
-  // Task list
-  const list = el("div", { className: "task-list" });
-  if (filtered.length === 0) {
-    list.appendChild(el("div", { className: "empty" },
-      pageTasks.length === 0
-        ? `No ${isAssignment ? "assignments" : "exams"} yet. Add one below!`
-        : "No tasks match this subject filter."
-    ));
-  }
-  for (const task of filtered) {
-    const subColor = SUBJECT_COLORS[task.subject] || "#888";
-    const dueFmt = formatDue(task.due);
-    const card = el("div", { className: "task-card" + (task.done ? " done" : "") });
-    card.style.borderLeftColor = task.done ? "#1c1c28" : subColor;
+  const list = el("div",{className:"task-list"});
 
-    // Checkbox
-    const check = el("button", {
-      className: "check-btn",
-      onClick: () => {
-        state.tasks = state.tasks.map(t => t.id === task.id ? { ...t, done: !t.done } : t);
-        saveTasks(); render();
-      },
-    }, task.done ? "✓" : "");
-    const pc = PRIORITY_COLORS[task.priority];
-    check.style.borderColor = task.done ? "#4caf88" : pc;
-    card.appendChild(check);
+  filtered.forEach(task=>{
 
-    // Content
-    const content = el("div", { className: "task-content" });
-    content.appendChild(el("div", { className: "task-text" }, task.text));
-    const tags = el("div", { className: "task-tags" });
+    const card = el("div",{className:"task-card"+(task.done?" done":"")});
 
-    // Subject tag
-    const subTag = el("span", { className: "tag" }, task.subject);
-    subTag.style.background = subColor + "18";
-    subTag.style.color = subColor;
-    subTag.style.borderColor = subColor + "28";
-    tags.appendChild(subTag);
+    const check = el("button",{className:"check-btn",
+      onClick:()=>{
+        task.done=!task.done;
+        saveTasks();
+        render();
+      }
+    },task.done?"✓":"");
 
-    // Priority tag
-    const prTag = el("span", { className: "tag" }, PRIORITY_LABELS[task.priority]);
-    prTag.style.background = pc + "14";
-    prTag.style.color = pc;
-    prTag.style.borderColor = pc + "22";
-    tags.appendChild(prTag);
+    const text = el("div",{className:"task-text"},task.text);
 
-    if (dueFmt) tags.appendChild(el("span", { className: "due-label" }, "due " + dueFmt));
-    content.appendChild(tags);
-    card.appendChild(content);
+    const del = el("button",{className:"delete-btn",
+      onClick:()=>{
+        state.tasks=state.tasks.filter(t=>t.id!==task.id);
+        saveTasks();
+        render();
+      }
+    },"×");
 
-    // Delete
-    card.appendChild(el("button", {
-      className: "delete-btn",
-      onClick: () => { state.tasks = state.tasks.filter(t => t.id !== task.id); saveTasks(); render(); },
-    }, "×"));
+    card.append(check,el("div",{className:"task-content"},text),del);
 
     list.appendChild(card);
-  }
+
+  });
+
   app.appendChild(list);
 
-  // Add task
-  if (!showAdd) {
-    app.appendChild(el("button", {
-      className: "add-trigger",
-      onClick: () => { state.showAdd = true; render(); },
-    }, `+ Add ${isAssignment ? "assignment" : "exam / study task"}`));
-  } else {
-    const form = el("div", { className: "add-form visible" });
-    form.appendChild(el("div", { className: "form-label" }, `New ${isAssignment ? "assignment" : "exam / study task"}`));
+  app.appendChild(
+    el("button",{className:"add-trigger",onClick:()=>{state.showAdd=true;render();}},
+    `+ Add ${isAssignment?"assignment":"exam / study task"}`)
+  );
 
-    // Text input
-    const textInput = el("input", {
-      className: "form-input",
-      type: "text",
-      placeholder: "What do you need to do?",
-      value: state.form.text,
-      onInput: e => { state.form.text = e.target.value; },
-      onKeydown: e => { if (e.key === "Enter") addTask(); },
-    });
-    form.appendChild(textInput);
-
-    // Subject select
-    const subSel = el("select", {
-      className: "form-select",
-      style: { width: "100%", marginBottom: "10px", color: SUBJECT_COLORS[state.form.subject] },
-      onChange: e => { state.form.subject = e.target.value; subSel.style.color = SUBJECT_COLORS[e.target.value]; },
-    });
-    for (const s of SUBJECTS) {
-      const opt = el("option", { value: s }, s);
-      if (s === state.form.subject) opt.selected = true;
-      subSel.appendChild(opt);
-    }
-    form.appendChild(subSel);
-
-    // Priority + date row
-    const row = el("div", { className: "form-row" });
-
-    const prSel = el("select", {
-      className: "form-select",
-      style: { color: PRIORITY_COLORS[state.form.priority] },
-      onChange: e => { state.form.priority = e.target.value; prSel.style.color = PRIORITY_COLORS[e.target.value]; },
-    });
-    for (const [val, label] of [["high","🔴 Urgent"],["medium","🟡 Soon"],["low","🟢 Later"]]) {
-      const opt = el("option", { value: val }, label);
-      if (val === state.form.priority) opt.selected = true;
-      prSel.appendChild(opt);
-    }
-    row.appendChild(prSel);
-
-    const dateInput = el("input", {
-      type: "date",
-      value: state.form.due,
-      style: { color: state.form.due ? "#d8d4cc" : "#2e2e42" },
-      onInput: e => { state.form.due = e.target.value; },
-    });
-    row.appendChild(dateInput);
-    form.appendChild(row);
-
-    // Buttons
-    const btnRow = el("div", { className: "btn-row" });
-    btnRow.appendChild(el("button", {
-      className: "btn-cancel",
-      onClick: () => { state.showAdd = false; render(); },
-    }, "Cancel"));
-    btnRow.appendChild(el("button", {
-      className: "btn-add",
-      onClick: addTask,
-    }, "+ Add task"));
-    form.appendChild(btnRow);
-    app.appendChild(form);
-
-    // Autofocus
-    setTimeout(() => textInput.focus(), 10);
-  }
 }
 
-function addTask() {
-  const { text, due, priority, subject } = state.form;
-  if (!text.trim()) return;
+function addTask(){
+
+  const {text,due,priority,subject}=state.form;
+
+  if(!text.trim())return;
+
   state.tasks.push({
-    id: state.nextId++,
-    text: text.trim(),
-    due: due || "—",
-    done: false,
+    id:crypto.randomUUID(),
+    text:text.trim(),
+    due:due||"—",
+    done:false,
     priority,
     subject,
-    type: state.page,
+    type:state.page
   });
-  state.form = { text: "", due: "", priority: "medium", subject: SUBJECTS[0] };
-  state.showAdd = false;
+
+  state.form={text:"",due:"",priority:"medium",subject:SUBJECTS[0]};
+  state.showAdd=false;
+
   saveTasks();
   render();
+
 }
 
 render();
+
+loadTasks().then(tasks=>{
+  state.tasks=tasks||[];
+  render();
+});
+
+setInterval(async()=>{
+  const remote=await loadTasks();
+  if(JSON.stringify(remote)!==JSON.stringify(state.tasks)){
+    state.tasks=remote;
+    render();
+  }
+},3000);
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

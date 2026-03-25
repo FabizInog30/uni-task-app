@@ -15,7 +15,7 @@
 body {
   min-height: 100vh;
   background: #0d0d14;
-  font-family: Georgia, serif;
+  font-family: 'Georgia', 'Times New Roman', serif;
   display: flex;
   justify-content: center;
   padding: 40px 16px 80px;
@@ -111,6 +111,13 @@ h1 em { font-style: italic; color: #c8b88a; }
 
 .task-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 20px; }
 
+.empty {
+  text-align: center;
+  color: #252530;
+  padding: 36px 0;
+  font-size: 14px;
+}
+
 .task-card {
   display: flex;
   align-items: flex-start;
@@ -129,24 +136,14 @@ h1 em { font-style: italic; color: #c8b88a; }
   width: 19px;
   height: 19px;
   border-radius: 50%;
-  flex-shrink: 0;
   border: 2px solid #f5a623;
   background: transparent;
   cursor: pointer;
 }
 
-.task-content { flex: 1; min-width: 0; }
+.task-content { flex: 1; }
 
-.task-text {
-  font-size: 14px;
-  color: #ccc8c0;
-  margin-bottom: 6px;
-}
-
-.task-card.done .task-text {
-  text-decoration: line-through;
-  color: #2e2e3e;
-}
+.task-text { font-size: 14px; color: #ccc8c0; margin-bottom: 6px; }
 
 .delete-btn {
   background: none;
@@ -166,9 +163,6 @@ h1 em { font-style: italic; color: #c8b88a; }
   font-size: 14px;
   cursor: pointer;
 }
-
-.add-trigger:hover { border-color: #c8b88a; color: #c8b88a; }
-
 </style>
 </head>
 
@@ -180,138 +174,127 @@ h1 em { font-style: italic; color: #c8b88a; }
 const API_URL = "https://script.google.com/macros/s/AKfycbzeN9ekGejjLad4ncxeXHGrXKJG2EKB2yeuccgb97n9Rd66V_BWAT34Vwbo9k4_uOKb/exec";
 
 const SUBJECTS = [
-  "Linear Algebra",
-  "Fundamentals of Electronics",
-  "Programming II",
-  "Fundamentals of Computers II",
-  "Mathematics Discrete and Logical II"
+"Linear Algebra",
+"Fundamentals of Electronics",
+"Programming II",
+"Fundamentals of Computers II",
+"Mathematics Discrete and Logical II"
 ];
 
-const SUBJECT_COLORS = {
-  "Linear Algebra": "#7b8cde",
-  "Fundamentals of Electronics": "#e07b5a",
-  "Programming II": "#4caf88",
-  "Fundamentals of Computers II": "#c47fd4",
-  "Mathematics Discrete and Logical II": "#5ab4e0"
-};
-
 let state = {
-  page: "assignment",
-  filterSubject: "All",
-  showAdd: false,
-  tasks: [],
-  form: { text: "", due: "", priority: "medium", subject: SUBJECTS[0] }
+page: "assignment",
+filterSubject: "All",
+showAdd: false,
+tasks: [],
+form: { text: "", due: "", priority: "medium", subject: SUBJECTS[0] }
 };
 
-async function loadTasks() {
-  try {
-    const res = await fetch(API_URL);
-    return await res.json();
-  } catch {
-    return [];
-  }
+async function loadTasks(){
+try{
+const res = await fetch(API_URL);
+return await res.json();
+}catch{
+return [];
+}
 }
 
-async function saveTasks() {
-  try {
-    const remote = await loadTasks();
-    const merged = [...remote];
+async function saveTasks(){
 
-    state.tasks.forEach(localTask => {
-      const index = merged.findIndex(t => t.id === localTask.id);
-      if (index === -1) merged.push(localTask);
-      else merged[index] = localTask;
-    });
+const remote = await loadTasks();
+const merged = [...remote];
 
-    state.tasks = merged;
+state.tasks.forEach(localTask=>{
+const index = merged.findIndex(t=>t.id===localTask.id);
+if(index===-1) merged.push(localTask);
+else merged[index]=localTask;
+});
 
-    await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(merged)
-    });
+state.tasks = merged;
 
-  } catch (err) {
-    console.error(err);
-  }
+await fetch(API_URL,{
+method:"POST",
+headers:{ "Content-Type":"text/plain;charset=utf-8"},
+body:JSON.stringify(merged)
+});
 }
 
-function el(tag, attrs, ...children) {
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs || {})) {
-    if (k.startsWith("on")) e.addEventListener(k.slice(2).toLowerCase(), v);
-    else e.setAttribute(k, v);
-  }
-  children.forEach(c => e.append(c));
-  return e;
+function el(tag,attrs,...children){
+const e=document.createElement(tag);
+Object.entries(attrs||{}).forEach(([k,v])=>{
+if(k.startsWith("on")) e.addEventListener(k.slice(2).toLowerCase(),v);
+else e.setAttribute(k,v);
+});
+children.forEach(c=>e.append(c));
+return e;
 }
 
-function render() {
+function render(){
 
-  const app = document.getElementById("app");
-  app.innerHTML = "";
+const app=document.getElementById("app");
+app.innerHTML="";
 
-  app.append(el("div",{class:"label"},"Academic Planner"));
-  app.append(el("h1",{},"Your tasks,",el("br"),el("em",{},"sorted.")));
+const list=el("div",{class:"task-list"});
 
-  const list = el("div",{class:"task-list"});
+state.tasks.forEach(task=>{
 
-  state.tasks.forEach(task=>{
+const card=el("div",{class:"task-card"});
 
-    const card = el("div",{class:"task-card"+(task.done?" done":"")});
-    card.style.borderLeftColor = SUBJECT_COLORS[task.subject];
+const check=el("button",{class:"check-btn",onclick:()=>{
+task.done=!task.done;
+saveTasks();
+render();
+}});
 
-    const check = el("button",{class:"check-btn",onclick:()=>{
-      task.done=!task.done;
-      saveTasks();
-      render();
-    }});
+const text=el("div",{class:"task-text"},task.text);
 
-    const text = el("div",{class:"task-text"},task.text);
+const del=el("button",{class:"delete-btn",onclick:()=>{
+state.tasks=state.tasks.filter(t=>t.id!==task.id);
+saveTasks();
+render();
+}},"×");
 
-    const del = el("button",{class:"delete-btn",onclick:()=>{
-      state.tasks=state.tasks.filter(t=>t.id!==task.id);
-      saveTasks();
-      render();
-    }},"×");
+card.append(check,el("div",{class:"task-content"},text),del);
+list.append(card);
 
-    card.append(check,el("div",{class:"task-content"},text),del);
+});
 
-    list.append(card);
-  });
+app.append(list);
 
-  app.append(list);
+app.append(el("button",{class:"add-trigger",onclick:addTask},"+ Add task"));
 
-  app.append(el("button",{class:"add-trigger",onclick:addTask},"+ Add task"));
 }
 
 function addTask(){
 
-  state.tasks.push({
-    id: crypto.randomUUID(),
-    text:"New task",
-    due:"",
-    done:false,
-    priority:"medium",
-    subject:SUBJECTS[0],
-    type:state.page
-  });
+state.tasks.push({
+id:crypto.randomUUID(),
+text:"New task",
+due:"",
+done:false,
+priority:"medium",
+subject:SUBJECTS[0],
+type:state.page
+});
 
-  saveTasks();
-  render();
+saveTasks();
+render();
 }
 
 async function refreshFromServer(){
-  const remote=await loadTasks();
-  if(JSON.stringify(remote)!==JSON.stringify(state.tasks)){
-    state.tasks=remote;
-    render();
-  }
+
+const remote=await loadTasks();
+
+if(JSON.stringify(remote)!==JSON.stringify(state.tasks)){
+state.tasks=remote;
+render();
+}
+
 }
 
 render();
+
 refreshFromServer();
-setInterval(refreshFromServer,5000);
+setInterval(refreshFromServer,3000);
 
 </script>
 </body>

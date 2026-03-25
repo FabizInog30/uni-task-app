@@ -1,297 +1,611 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Uni Task List</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Uni Task List</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0d0d14">
+    body {
+      min-height: 100vh;
+      background: #0d0d14;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px 80px;
+      color: #d8d4cc;
+    }
 
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    #app { width: 100%; max-width: 540px; }
 
-body {
-  min-height: 100vh;
-  background: #0d0d14;
-  font-family: 'Georgia', 'Times New Roman', serif;
-  display: flex;
-  justify-content: center;
-  padding: 40px 16px 80px;
-  color: #d8d4cc;
-}
+    .label {
+      font-size: 11px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #3a3a50;
+      margin-bottom: 6px;
+    }
 
-#app { width: 100%; max-width: 540px; }
+    h1 {
+      font-size: 34px;
+      font-weight: 400;
+      color: #f0ede6;
+      line-height: 1.1;
+      margin-bottom: 28px;
+    }
 
-.label {
-  font-size: 11px;
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-  color: #3a3a50;
-  margin-bottom: 6px;
-}
+    h1 em { font-style: italic; color: #c8b88a; }
 
-h1 {
-  font-size: 34px;
-  font-weight: 400;
-  color: #f0ede6;
-  line-height: 1.1;
-  margin-bottom: 28px;
-}
+    /* Toggle */
+    .toggle {
+      display: inline-flex;
+      background: #13131c;
+      border-radius: 12px;
+      border: 1px solid #1e1e2c;
+      padding: 4px;
+      gap: 2px;
+      margin-bottom: 28px;
+    }
 
-h1 em { font-style: italic; color: #c8b88a; }
+    .toggle button {
+      padding: 9px 20px;
+      border-radius: 9px;
+      border: none;
+      background: transparent;
+      color: #3a3a52;
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.02em;
+    }
 
-.toggle {
-  display: inline-flex;
-  background: #13131c;
-  border-radius: 12px;
-  border: 1px solid #1e1e2c;
-  padding: 4px;
-  gap: 2px;
-  margin-bottom: 28px;
-}
+    .toggle button.active {
+      background: #c8b88a;
+      color: #0d0d14;
+      font-weight: 700;
+    }
 
-.toggle button {
-  padding: 9px 20px;
-  border-radius: 9px;
-  border: none;
-  background: transparent;
-  color: #3a3a52;
-  font-size: 13px;
-  cursor: pointer;
-}
+    /* Progress */
+    .progress-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #444;
+      margin-bottom: 7px;
+    }
 
-.toggle button.active {
-  background: #c8b88a;
-  color: #0d0d14;
-  font-weight: 700;
-}
+    .progress-row span.pct { color: #c8b88a; }
+    .progress-row span.pct.done { color: #4caf88; }
 
-.progress-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  margin-bottom: 7px;
-}
+    .progress-bar-bg {
+      height: 3px;
+      background: #1a1a24;
+      border-radius: 4px;
+      margin-bottom: 24px;
+    }
 
-.progress-bar-bg {
-  height: 3px;
-  background: #1a1a24;
-  border-radius: 4px;
-  margin-bottom: 24px;
-}
+    .progress-bar-fill {
+      height: 100%;
+      background: #c8b88a;
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
 
-.progress-bar-fill {
-  height: 100%;
-  background: #c8b88a;
-  border-radius: 4px;
-  transition: width 0.4s ease;
-}
+    /* Subject filters */
+    .filters {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
 
-.filters {
-  display: flex;
-  gap: 5px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
-}
+    .filter-btn {
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid #1e1e2c;
+      background: transparent;
+      color: #333;
+      font-family: inherit;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
 
-.filter-btn {
-  padding: 3px 10px;
-  border-radius: 20px;
-  border: 1px solid #1e1e2c;
-  background: transparent;
-  font-size: 11px;
-  cursor: pointer;
-}
+    /* Task list */
+    .task-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 20px; }
 
-.task-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 20px; }
+    .empty {
+      text-align: center;
+      color: #252530;
+      padding: 36px 0;
+      font-size: 14px;
+    }
 
-.task-card {
-  display: flex;
-  gap: 11px;
-  padding: 12px 14px;
-  background: #13131c;
-  border-radius: 10px;
-  border-left: 3px solid #888;
-}
+    .task-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 11px;
+      padding: 12px 14px;
+      background: #13131c;
+      border-radius: 10px;
+      border: 1px solid #1c1c28;
+      border-left-width: 3px;
+      transition: opacity 0.2s;
+    }
 
-.task-card.done { opacity: 0.4; }
+    .task-card.done { opacity: 0.4; }
 
-.check-btn {
-  width: 19px;
-  height: 19px;
-  border-radius: 50%;
-  border: 2px solid #f5a623;
-  background: transparent;
-  cursor: pointer;
-}
+    .check-btn {
+      margin-top: 2px;
+      width: 19px;
+      height: 19px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 2px solid #f5a623;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: #0d0d14;
+      transition: all 0.2s;
+    }
 
-.task-text { font-size: 14px; }
+    .task-card.done .check-btn {
+      background: #4caf88;
+      border-color: #4caf88;
+    }
 
-.delete-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 18px;
-}
+    .task-content { flex: 1; min-width: 0; }
 
-.add-trigger {
-  width: 100%;
-  padding: 13px;
-  border-radius: 10px;
-  border: 1px dashed #1e1e2c;
-  background: transparent;
-  cursor: pointer;
-}
-</style>
+    .task-text {
+      font-size: 14px;
+      color: #ccc8c0;
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+
+    .task-card.done .task-text {
+      text-decoration: line-through;
+      color: #2e2e3e;
+    }
+
+    .task-tags {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .tag {
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 10px;
+      border: 1px solid transparent;
+    }
+
+    .due-label { font-size: 11px; color: #2e2e42; }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #222230;
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+      padding: 0 2px;
+      flex-shrink: 0;
+      transition: color 0.15s;
+    }
+
+    .delete-btn:hover { color: #ff4d4d; }
+
+    /* Add task */
+    .add-trigger {
+      width: 100%;
+      padding: 13px;
+      border-radius: 10px;
+      border: 1px dashed #1e1e2c;
+      background: transparent;
+      color: #2e2e42;
+      font-family: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .add-trigger:hover { border-color: #c8b88a; color: #c8b88a; }
+
+    .add-form {
+      background: #13131c;
+      border-radius: 12px;
+      padding: 18px;
+      border: 1px solid #1e1e2c;
+      display: none;
+    }
+
+    .add-form.visible { display: block; }
+
+    .form-label {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #333;
+      margin-bottom: 14px;
+    }
+
+    .form-input {
+      width: 100%;
+      background: #0d0d14;
+      border: 1px solid #1e1e2c;
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #d8d4cc;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      margin-bottom: 10px;
+    }
+
+    .form-select {
+      background: #0d0d14;
+      border: 1px solid #1e1e2c;
+      border-radius: 8px;
+      padding: 9px 10px;
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+      color: #d8d4cc;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .form-row .form-select,
+    .form-row input[type="date"] {
+      flex: 1;
+      min-width: 120px;
+      background: #0d0d14;
+      border: 1px solid #1e1e2c;
+      border-radius: 8px;
+      padding: 9px 10px;
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      color: #d8d4cc;
+    }
+
+    .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+
+    .btn-cancel {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #1e1e2c;
+      background: transparent;
+      color: #333;
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .btn-add {
+      flex: 2;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      background: #c8b88a;
+      color: #0d0d14;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
 </head>
-
 <body>
 <div id="app"></div>
 
 <script>
-
-const API_URL = "https://script.google.com/macros/s/AKfycbzeN9ekGejjLad4ncxeXHGrXKJG2EKB2yeuccgb97n9Rd66V_BWAT34Vwbo9k4_uOKb/exec";
-
 const SUBJECTS = [
-"Linear Algebra",
-"Fundamentals of Electronics",
-"Programming II",
-"Fundamentals of Computers II",
-"Mathematics Discrete and Logical II"
+  "Linear Algebra",
+  "Fundamentals of Electronics",
+  "Programming II",
+  "Fundamentals of Computers II",
+  "Mathematics Discrete and Logical II",
 ];
 
 const SUBJECT_COLORS = {
-"Linear Algebra": "#7b8cde",
-"Fundamentals of Electronics": "#e07b5a",
-"Programming II": "#4caf88",
-"Fundamentals of Computers II": "#c47fd4",
-"Mathematics Discrete and Logical II": "#5ab4e0"
+  "Linear Algebra": "#7b8cde",
+  "Fundamentals of Electronics": "#e07b5a",
+  "Programming II": "#4caf88",
+  "Fundamentals of Computers II": "#c47fd4",
+  "Mathematics Discrete and Logical II": "#5ab4e0",
 };
 
+const PRIORITY_COLORS = { high: "#ff4d4d", medium: "#f5a623", low: "#4caf88" };
+const PRIORITY_LABELS = { high: "Urgent", medium: "Soon", low: "Later" };
+
+// ── State ──────────────────────────────────────────────────────────────────
 let state = {
-page:"assignment",
-filterSubject:"All",
-showAdd:false,
-tasks:[]
+  page: "assignment",
+  filterSubject: "All",
+  showAdd: false,
+  nextId: 100,
+  tasks: loadTasks(),
+  form: { text: "", due: "", priority: "medium", subject: SUBJECTS[0] },
 };
 
-async function loadTasks(){
-try{
-const res=await fetch(API_URL);
-return await res.json();
-}catch{
-return [];
-}
-}
-
-async function saveTasks(){
-
-const remote=await loadTasks();
-const merged=[...remote];
-
-state.tasks.forEach(local=>{
-const index=merged.findIndex(t=>t.id===local.id);
-if(index===-1) merged.push(local);
-else merged[index]=local;
-});
-
-state.tasks=merged;
-
-await fetch(API_URL,{
-method:"POST",
-headers:{ "Content-Type":"text/plain;charset=utf-8" },
-body:JSON.stringify(merged)
-});
+function loadTasks() {
+  try {
+    const saved = localStorage.getItem("uni-tasks");
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return [
+    { id: 1, text: "Problem set 3", due: "2026-03-28", done: false, priority: "high", subject: "Linear Algebra", type: "assignment" },
+    { id: 2, text: "Debugging exercise", due: "2026-03-29", done: false, priority: "medium", subject: "Programming II", type: "assignment" },
+    { id: 3, text: "Circuit analysis worksheet", due: "2026-04-02", done: false, priority: "medium", subject: "Fundamentals of Electronics", type: "assignment" },
+    { id: 4, text: "Chapter 4–6 revision", due: "2026-04-05", done: false, priority: "high", subject: "Linear Algebra", type: "exam" },
+    { id: 5, text: "Past paper practice", due: "2026-04-07", done: false, priority: "medium", subject: "Mathematics Discrete and Logical II", type: "exam" },
+    { id: 6, text: "Flash cards — memory units", due: "2026-04-10", done: false, priority: "low", subject: "Fundamentals of Computers II", type: "exam" },
+  ];
 }
 
-function el(tag,attrs,...children){
-const e=document.createElement(tag);
-Object.entries(attrs||{}).forEach(([k,v])=>{
-if(k.startsWith("on")) e.addEventListener(k.slice(2).toLowerCase(),v);
-else e.setAttribute(k,v);
-});
-children.forEach(c=>{
-if(c!=null) e.append(typeof c==="string"?document.createTextNode(c):c);
-});
-return e;
+function saveTasks() {
+  try { localStorage.setItem("uni-tasks", JSON.stringify(state.tasks)); } catch(e) {}
 }
 
-function render(){
+// ── Helpers ────────────────────────────────────────────────────────────────
+function formatDue(dateStr) {
+  if (!dateStr || dateStr === "—") return null;
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
 
-const app=document.getElementById("app");
-app.innerHTML="";
+function el(tag, attrs, ...children) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k.startsWith("on")) e.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (k === "className") e.className = v;
+    else if (k === "style" && typeof v === "object") Object.assign(e.style, v);
+    else e.setAttribute(k, v);
+  }
+  for (const child of children) {
+    if (child == null) continue;
+    e.appendChild(typeof child === "string" ? document.createTextNode(child) : child);
+  }
+  return e;
+}
 
-app.append(el("div",{class:"label"},"Academic Planner"));
-app.append(el("h1",{},"Your tasks,",el("br"),el("em",{},"sorted.")));
+// ── Render ─────────────────────────────────────────────────────────────────
+function render() {
+  const { page, filterSubject, showAdd, tasks, form } = state;
+  const pageTasks = tasks.filter(t => t.type === page);
+  const filtered = pageTasks
+    .filter(t => filterSubject === "All" || t.subject === filterSubject)
+    .sort((a, b) => {
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      return { high: 0, medium: 1, low: 2 }[a.priority] - { high: 0, medium: 1, low: 2 }[b.priority];
+    });
+  const done = pageTasks.filter(t => t.done).length;
+  const pct = pageTasks.length ? Math.round((done / pageTasks.length) * 100) : 0;
+  const isAssignment = page === "assignment";
 
-const list=el("div",{class:"task-list"});
+  const app = document.getElementById("app");
+  app.innerHTML = "";
 
-state.tasks.forEach(task=>{
+  // Header
+  app.appendChild(el("div", { className: "label" }, "Academic Planner"));
+  app.appendChild(el("h1", {}, "Your tasks,", el("br", {}), el("em", {}, "sorted.")));
 
-const card=el("div",{class:"task-card"+(task.done?" done":"")});
-card.style.borderLeftColor=SUBJECT_COLORS[task.subject];
+  // Toggle
+  const toggle = el("div", { className: "toggle" });
+  for (const { key, label } of [
+    { key: "assignment", label: "✏️ Assignments" },
+    { key: "exam", label: "📚 Exams & Study" },
+  ]) {
+    const btn = el("button", {
+      className: page === key ? "active" : "",
+      onClick: () => { state.page = key; state.filterSubject = "All"; state.showAdd = false; render(); },
+    }, label);
+    toggle.appendChild(btn);
+  }
+  app.appendChild(toggle);
 
-const check=el("button",{class:"check-btn",onclick:()=>{
-task.done=!task.done;
-saveTasks();
+  // Progress
+  const pctSpan = el("span", { className: "pct" + (pct === 100 ? " done" : "") }, pct + "%");
+  if (pct === 100) pctSpan.style.color = "#4caf88";
+  app.appendChild(el("div", { className: "progress-row" },
+    el("span", {}, `${done} of ${pageTasks.length} complete`),
+    pctSpan
+  ));
+  const fillBar = el("div", { className: "progress-bar-fill" });
+  fillBar.style.width = pct + "%";
+  if (pct === 100) fillBar.style.background = "#4caf88";
+  app.appendChild(el("div", { className: "progress-bar-bg" }, fillBar));
+
+  // Subject filters
+  const filters = el("div", { className: "filters" });
+  for (const s of ["All", ...SUBJECTS]) {
+    const active = filterSubject === s;
+    const color = s === "All" ? "#666" : SUBJECT_COLORS[s];
+    const btn = el("button", {
+      className: "filter-btn",
+      onClick: () => { state.filterSubject = s; render(); },
+    }, s === "All" ? "All subjects" : s);
+    if (active) {
+      btn.style.borderColor = color;
+      btn.style.background = color + "20";
+      btn.style.color = color;
+    }
+    filters.appendChild(btn);
+  }
+  app.appendChild(filters);
+
+  // Task list
+  const list = el("div", { className: "task-list" });
+  if (filtered.length === 0) {
+    list.appendChild(el("div", { className: "empty" },
+      pageTasks.length === 0
+        ? `No ${isAssignment ? "assignments" : "exams"} yet. Add one below!`
+        : "No tasks match this subject filter."
+    ));
+  }
+  for (const task of filtered) {
+    const subColor = SUBJECT_COLORS[task.subject] || "#888";
+    const dueFmt = formatDue(task.due);
+    const card = el("div", { className: "task-card" + (task.done ? " done" : "") });
+    card.style.borderLeftColor = task.done ? "#1c1c28" : subColor;
+
+    // Checkbox
+    const check = el("button", {
+      className: "check-btn",
+      onClick: () => {
+        state.tasks = state.tasks.map(t => t.id === task.id ? { ...t, done: !t.done } : t);
+        saveTasks(); render();
+      },
+    }, task.done ? "✓" : "");
+    const pc = PRIORITY_COLORS[task.priority];
+    check.style.borderColor = task.done ? "#4caf88" : pc;
+    card.appendChild(check);
+
+    // Content
+    const content = el("div", { className: "task-content" });
+    content.appendChild(el("div", { className: "task-text" }, task.text));
+    const tags = el("div", { className: "task-tags" });
+
+    // Subject tag
+    const subTag = el("span", { className: "tag" }, task.subject);
+    subTag.style.background = subColor + "18";
+    subTag.style.color = subColor;
+    subTag.style.borderColor = subColor + "28";
+    tags.appendChild(subTag);
+
+    // Priority tag
+    const prTag = el("span", { className: "tag" }, PRIORITY_LABELS[task.priority]);
+    prTag.style.background = pc + "14";
+    prTag.style.color = pc;
+    prTag.style.borderColor = pc + "22";
+    tags.appendChild(prTag);
+
+    if (dueFmt) tags.appendChild(el("span", { className: "due-label" }, "due " + dueFmt));
+    content.appendChild(tags);
+    card.appendChild(content);
+
+    // Delete
+    card.appendChild(el("button", {
+      className: "delete-btn",
+      onClick: () => { state.tasks = state.tasks.filter(t => t.id !== task.id); saveTasks(); render(); },
+    }, "×"));
+
+    list.appendChild(card);
+  }
+  app.appendChild(list);
+
+  // Add task
+  if (!showAdd) {
+    app.appendChild(el("button", {
+      className: "add-trigger",
+      onClick: () => { state.showAdd = true; render(); },
+    }, `+ Add ${isAssignment ? "assignment" : "exam / study task"}`));
+  } else {
+    const form = el("div", { className: "add-form visible" });
+    form.appendChild(el("div", { className: "form-label" }, `New ${isAssignment ? "assignment" : "exam / study task"}`));
+
+    // Text input
+    const textInput = el("input", {
+      className: "form-input",
+      type: "text",
+      placeholder: "What do you need to do?",
+      value: state.form.text,
+      onInput: e => { state.form.text = e.target.value; },
+      onKeydown: e => { if (e.key === "Enter") addTask(); },
+    });
+    form.appendChild(textInput);
+
+    // Subject select
+    const subSel = el("select", {
+      className: "form-select",
+      style: { width: "100%", marginBottom: "10px", color: SUBJECT_COLORS[state.form.subject] },
+      onChange: e => { state.form.subject = e.target.value; subSel.style.color = SUBJECT_COLORS[e.target.value]; },
+    });
+    for (const s of SUBJECTS) {
+      const opt = el("option", { value: s }, s);
+      if (s === state.form.subject) opt.selected = true;
+      subSel.appendChild(opt);
+    }
+    form.appendChild(subSel);
+
+    // Priority + date row
+    const row = el("div", { className: "form-row" });
+
+    const prSel = el("select", {
+      className: "form-select",
+      style: { color: PRIORITY_COLORS[state.form.priority] },
+      onChange: e => { state.form.priority = e.target.value; prSel.style.color = PRIORITY_COLORS[e.target.value]; },
+    });
+    for (const [val, label] of [["high","🔴 Urgent"],["medium","🟡 Soon"],["low","🟢 Later"]]) {
+      const opt = el("option", { value: val }, label);
+      if (val === state.form.priority) opt.selected = true;
+      prSel.appendChild(opt);
+    }
+    row.appendChild(prSel);
+
+    const dateInput = el("input", {
+      type: "date",
+      value: state.form.due,
+      style: { color: state.form.due ? "#d8d4cc" : "#2e2e42" },
+      onInput: e => { state.form.due = e.target.value; },
+    });
+    row.appendChild(dateInput);
+    form.appendChild(row);
+
+    // Buttons
+    const btnRow = el("div", { className: "btn-row" });
+    btnRow.appendChild(el("button", {
+      className: "btn-cancel",
+      onClick: () => { state.showAdd = false; render(); },
+    }, "Cancel"));
+    btnRow.appendChild(el("button", {
+      className: "btn-add",
+      onClick: addTask,
+    }, "+ Add task"));
+    form.appendChild(btnRow);
+    app.appendChild(form);
+
+    // Autofocus
+    setTimeout(() => textInput.focus(), 10);
+  }
+}
+
+function addTask() {
+  const { text, due, priority, subject } = state.form;
+  if (!text.trim()) return;
+  state.tasks.push({
+    id: state.nextId++,
+    text: text.trim(),
+    due: due || "—",
+    done: false,
+    priority,
+    subject,
+    type: state.page,
+  });
+  state.form = { text: "", due: "", priority: "medium", subject: SUBJECTS[0] };
+  state.showAdd = false;
+  saveTasks();
+  render();
+}
+
 render();
-}});
-
-const text=el("div",{class:"task-text"},task.text);
-
-const del=el("button",{class:"delete-btn",onclick:()=>{
-state.tasks=state.tasks.filter(t=>t.id!==task.id);
-saveTasks();
-render();
-}},"×");
-
-card.append(check,text,del);
-list.append(card);
-
-});
-
-app.append(list);
-
-app.append(el("button",{class:"add-trigger",onclick:addTask},"+ Add task"));
-
-}
-
-function addTask(){
-
-state.tasks.push({
-id:crypto.randomUUID(),
-text:"New task",
-done:false,
-subject:SUBJECTS[0],
-type:state.page
-});
-
-saveTasks();
-render();
-}
-
-async function refresh(){
-
-const remote=await loadTasks();
-
-if(JSON.stringify(remote)!==JSON.stringify(state.tasks)){
-state.tasks=remote;
-render();
-}
-
-}
-
-render();
-
-loadTasks().then(tasks=>{
-state.tasks=tasks||[];
-render();
-});
-
-setInterval(refresh,3000);
-
 </script>
 </body>
 </html>
